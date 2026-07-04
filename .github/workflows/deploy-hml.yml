@@ -1,0 +1,61 @@
+name: Deploy HML
+
+on:
+  push:
+    branches: [deploy/hml]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hml
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, masteron]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Core image
+        run: |
+          docker build \
+            -f bin/core/aio.Dockerfile \
+            -t komodo-core:hml \
+            -t komodo-core:hml-${GITHUB_SHA::8} \
+            .
+
+      - name: Build Periphery image
+        run: |
+          docker build \
+            -f bin/periphery/aio.Dockerfile \
+            -t komodo-periphery:hml \
+            -t komodo-periphery:hml-${GITHUB_SHA::8} \
+            .
+
+      - name: Deploy
+        working-directory: /home/masteron/komodo/compose
+        run: |
+          docker compose -p komodo -f mongo.compose.yaml --env-file compose.env up -d core periphery
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:9120; then
+              echo "Core is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Core failed to respond on :9120 after 60s"
+          docker logs --tail 50 komodo-core-1
+          exit 1
+
+      - name: Cleanup old images
+        if: success()
+        run: |
+          docker images "komodo-core" --format "{{.Tag}}" \
+            | grep '^hml-' | tail -n +4 \
+            | xargs -r -I{} docker rmi komodo-core:{} || true
+          docker images "komodo-periphery" --format "{{.Tag}}" \
+            | grep '^hml-' | tail -n +4 \
+            | xargs -r -I{} docker rmi komodo-periphery:{} || true
+          docker image prune -f
