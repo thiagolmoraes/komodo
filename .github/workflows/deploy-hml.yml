@@ -10,7 +10,48 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  checks:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Build
+        run: cargo build
+
+      - name: Run tests
+        run: cargo test
+
+  typecheck-ui:
+    name: Typecheck UI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build TS client and typecheck UI
+        run: |
+          corepack enable
+          cd client/core/ts && yarn && yarn build && yarn link
+          cd ../../../ui && yarn link komodo_client && yarn && yarn tsc --noEmit
+
   build-and-deploy:
+    needs: [checks, typecheck-ui]
     runs-on: [self-hosted, masteron]
     steps:
       - uses: actions/checkout@v4
