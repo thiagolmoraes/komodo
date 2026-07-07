@@ -137,6 +137,11 @@ impl Resolve<WriteArgs> for UpdateGitProviderAccount {
       );
     }
 
+    // Reject masked placeholder — token read endpoints return "***"
+    if self.account.token.as_deref() == Some("***") {
+      self.account.token = None;
+    }
+
     // Ensure update does not change id
     self.account.id = None;
 
@@ -368,6 +373,11 @@ impl Resolve<WriteArgs> for UpdateDockerRegistryAccount {
         )
         .status_code(StatusCode::BAD_REQUEST),
       );
+    }
+
+    // Reject masked placeholder — token read endpoints return "***"
+    if self.account.token.as_deref() == Some("***") {
+      self.account.token = None;
     }
 
     self.account.id = None;

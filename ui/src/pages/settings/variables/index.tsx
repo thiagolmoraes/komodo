@@ -110,7 +110,9 @@ export default function SettingsVariables() {
                         <Text c="dimmed">Set value</Text>
                       )}
                     </Button>
-                    <CopyButton content={row.original.value ?? ""} />
+                    {!row.original.is_secret && (
+                      <CopyButton content={row.original.value ?? ""} />
+                    )}
                   </Group>
                 );
               },

@@ -186,35 +186,34 @@ function Providers({ type }: { type: "GitProvider" | "DockerRegistry" }) {
               ),
               cell: ({ row }) => {
                 return (
-                  <Group gap="sm" wrap="nowrap">
-                    <Button
-                      className="overflow-ellipsis"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setUpdateMenuData({
-                          title: "Set Token",
-                          value: row.original.token ?? "",
-                          placeholder: "Input account token",
-                          onUpdate: (token) => {
-                            if (row.original.token === token) {
-                              return;
-                            }
-                            updateAccount({
-                              id: row.original._id?.$oid!,
-                              account: { token },
-                            });
-                          },
-                        });
-                      }}
-                      w={{ base: 200, lg: 300 }}
-                      justify="start"
-                    >
-                      {"*".repeat(row.original.token?.length || 0) || (
-                        <Text c="dimmed">Set token</Text>
-                      )}
-                    </Button>
-                    <CopyButton content={row.original.token ?? ""} />
-                  </Group>
+                  <Button
+                    className="overflow-ellipsis"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setUpdateMenuData({
+                        title: "Set Token",
+                        value: "",
+                        placeholder: "Enter new token to replace existing",
+                        onUpdate: (token) => {
+                          if (!token) {
+                            return;
+                          }
+                          updateAccount({
+                            id: row.original._id?.$oid!,
+                            account: { token },
+                          });
+                        },
+                      });
+                    }}
+                    w={{ base: 200, lg: 300 }}
+                    justify="start"
+                  >
+                    {row.original.token ? (
+                      "***"
+                    ) : (
+                      <Text c="dimmed">Set token</Text>
+                    )}
+                  </Button>
                 );
               },
             },

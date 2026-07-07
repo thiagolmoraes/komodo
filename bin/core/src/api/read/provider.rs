@@ -11,6 +11,10 @@ use crate::state::db_client;
 
 use super::ReadArgs;
 
+fn mask_token(token: String) -> String {
+  if token.is_empty() { token } else { "***".to_string() }
+}
+
 impl Resolve<ReadArgs> for GetGitProviderAccount {
   async fn resolve(
     self,
@@ -21,12 +25,13 @@ impl Resolve<ReadArgs> for GetGitProviderAccount {
         anyhow!("Only admins can read git provider accounts").into(),
       );
     }
-    let res = find_one_by_id(&db_client().git_accounts, &self.id)
+    let mut res = find_one_by_id(&db_client().git_accounts, &self.id)
       .await
       .context("failed to query db for git provider accounts")?
       .context(
         "did not find git provider account with the given id",
       )?;
+    res.token = mask_token(res.token);
     Ok(res)
   }
 }
@@ -48,7 +53,7 @@ impl Resolve<ReadArgs> for ListGitProviderAccounts {
     if let Some(username) = self.username {
       filter.insert("username", username);
     }
-    let res = find_collect(
+    let mut res = find_collect(
       &db_client().git_accounts,
       filter,
       FindOptions::builder()
@@ -57,6 +62,9 @@ impl Resolve<ReadArgs> for ListGitProviderAccounts {
     )
     .await
     .context("failed to query db for git provider accounts")?;
+    for account in &mut res {
+      account.token = mask_token(account.token.clone());
+    }
     Ok(res)
   }
 }
@@ -72,13 +80,14 @@ impl Resolve<ReadArgs> for GetDockerRegistryAccount {
           .into(),
       );
     }
-    let res =
+    let mut res =
       find_one_by_id(&db_client().registry_accounts, &self.id)
         .await
         .context("failed to query db for docker registry accounts")?
         .context(
           "did not find docker registry account with the given id",
         )?;
+    res.token = mask_token(res.token);
     Ok(res)
   }
 }
@@ -101,7 +110,7 @@ impl Resolve<ReadArgs> for ListDockerRegistryAccounts {
     if let Some(username) = self.username {
       filter.insert("username", username);
     }
-    let res = find_collect(
+    let mut res = find_collect(
       &db_client().registry_accounts,
       filter,
       FindOptions::builder()
@@ -110,6 +119,9 @@ impl Resolve<ReadArgs> for ListDockerRegistryAccounts {
     )
     .await
     .context("failed to query db for docker registry accounts")?;
+    for account in &mut res {
+      account.token = mask_token(account.token.clone());
+    }
     Ok(res)
   }
 }
