@@ -227,7 +227,7 @@ impl Resolve<ReadArgs> for ExportResourcesToToml {
       .context("failed to get variables from db")?
       .into_iter()
       .map(|mut variable| {
-        if !user.admin && variable.is_secret {
+        if variable.is_secret {
           variable.value = "#".repeat(variable.value.len())
         }
         variable

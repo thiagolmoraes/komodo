@@ -23,7 +23,8 @@ pub struct Variable {
   #[serde(default)]
   pub value: String,
   /// If marked as secret, the variable value will be hidden in updates / logs.
-  /// Additionally the value will not be served in read requests by non admin users.
+  /// Additionally the value is write-only: it will be masked in all read requests,
+  /// including for admins. It can only be overwritten, never read back.
   ///
   /// Note that the value is NOT encrypted in the database, and will likely show up in database logs.
   /// The security of these variables comes down to the security

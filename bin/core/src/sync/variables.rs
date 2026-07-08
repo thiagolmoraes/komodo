@@ -23,6 +23,19 @@ pub fn variable_to_toml(
   Ok(format!("[[variable]]\n{inner}"))
 }
 
+/// Secret values are write-only, mask them in diff views.
+fn variable_to_toml_masked(
+  variable: &Variable,
+) -> anyhow::Result<String> {
+  if variable.is_secret {
+    let mut variable = variable.clone();
+    variable.value = "#".repeat(variable.value.len());
+    variable_to_toml(&variable)
+  } else {
+    variable_to_toml(variable)
+  }
+}
+
 pub struct ToUpdateItem {
   pub variable: Variable,
   pub update_value: bool,
@@ -47,7 +60,7 @@ pub async fn get_updates_for_view(
     for variable in map.values() {
       if !variables.iter().any(|v| v.name == variable.name) {
         diffs.push(DiffData::Delete {
-          current: variable_to_toml(variable)?,
+          current: variable_to_toml_masked(variable)?,
         });
       }
     }
@@ -62,14 +75,14 @@ pub async fn get_updates_for_view(
           continue;
         }
         diffs.push(DiffData::Update {
-          proposed: variable_to_toml(variable)?,
-          current: variable_to_toml(original)?,
+          proposed: variable_to_toml_masked(variable)?,
+          current: variable_to_toml_masked(original)?,
         });
       }
       None => {
         diffs.push(DiffData::Create {
           name: variable.name.clone(),
-          proposed: variable_to_toml(variable)?,
+          proposed: variable_to_toml_masked(variable)?,
         });
       }
     }
