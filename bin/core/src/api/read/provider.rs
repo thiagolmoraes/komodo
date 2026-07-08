@@ -12,7 +12,11 @@ use crate::state::db_client;
 use super::ReadArgs;
 
 fn mask_token(token: String) -> String {
-  if token.is_empty() { token } else { "***".to_string() }
+  if token.is_empty() {
+    token
+  } else {
+    "***".to_string()
+  }
 }
 
 impl Resolve<ReadArgs> for GetGitProviderAccount {
