@@ -13,13 +13,13 @@ use super::ReadArgs;
 impl Resolve<ReadArgs> for GetVariable {
   async fn resolve(
     self,
-    _: &ReadArgs,
+    ReadArgs { user }: &ReadArgs,
   ) -> mogh_error::Result<GetVariableResponse> {
     let mut variable = get_variable(&self.name).await?;
-    // Secret values are write-only: masked for everyone, including admins.
-    if variable.is_secret {
-      variable.value = "#".repeat(variable.value.len());
+    if !variable.is_secret || user.admin {
+      return Ok(variable);
     }
+    variable.value = "#".repeat(variable.value.len());
     Ok(variable)
   }
 }
@@ -27,7 +27,7 @@ impl Resolve<ReadArgs> for GetVariable {
 impl Resolve<ReadArgs> for ListVariables {
   async fn resolve(
     self,
-    _: &ReadArgs,
+    ReadArgs { user }: &ReadArgs,
   ) -> mogh_error::Result<ListVariablesResponse> {
     let variables = find_collect(
       &db_client().variables,
@@ -35,15 +35,19 @@ impl Resolve<ReadArgs> for ListVariables {
       FindOptions::builder().sort(doc! { "name": 1 }).build(),
     )
     .await
-    .context("failed to query db for variables")?
-    .into_iter()
-    .map(|mut variable| {
-      if variable.is_secret {
-        variable.value = "#".repeat(variable.value.len());
-      }
-      variable
-    })
-    .collect();
+    .context("failed to query db for variables")?;
+    if user.admin {
+      return Ok(variables);
+    }
+    let variables = variables
+      .into_iter()
+      .map(|mut variable| {
+        if variable.is_secret {
+          variable.value = "#".repeat(variable.value.len());
+        }
+        variable
+      })
+      .collect();
     Ok(variables)
   }
 }

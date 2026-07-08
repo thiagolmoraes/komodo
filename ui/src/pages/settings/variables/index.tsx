@@ -84,7 +84,6 @@ export default function SettingsVariables() {
                 <SortableHeader column={column} title="Value" />
               ),
               cell: ({ row }) => {
-                const isSecret = row.original.is_secret;
                 return (
                   <Group gap="sm" wrap="nowrap">
                     <Button
@@ -92,14 +91,9 @@ export default function SettingsVariables() {
                       onClick={() => {
                         setUpdateMenuData({
                           title: `${row.original.name} - Value`,
-                          value: isSecret ? "" : (row.original.value ?? ""),
-                          placeholder: isSecret
-                            ? "Secret value is hidden. Enter new value to overwrite."
-                            : "Set value",
+                          value: row.original.value ?? "",
+                          placeholder: "Set value",
                           onUpdate: (value) => {
-                            if (isSecret && !value) {
-                              return;
-                            }
                             if (row.original.value === value) {
                               return;
                             }

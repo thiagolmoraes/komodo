@@ -19,14 +19,6 @@ use crate::{
 
 use super::WriteArgs;
 
-/// Secret values are write-only. Mask them in any response / log.
-fn masked(mut variable: Variable) -> Variable {
-  if variable.is_secret {
-    variable.value = "#".repeat(variable.value.len());
-  }
-  variable
-}
-
 impl Resolve<WriteArgs> for CreateVariable {
   #[instrument(
     "CreateVariable",
@@ -80,16 +72,20 @@ impl Resolve<WriteArgs> for CreateVariable {
       user,
     );
 
+    let mut log_variable = variable.clone();
+    if log_variable.is_secret {
+      log_variable.value = "#".repeat(log_variable.value.len());
+    }
     update.push_simple_log(
       "Create Variable",
-      format!("{:#?}", masked(variable.clone())),
+      format!("{log_variable:#?}"),
     );
 
     update.finalize();
 
     add_update(update).await?;
 
-    Ok(masked(get_variable(&variable.name).await?))
+    Ok(get_variable(&variable.name).await?)
   }
 }
 
@@ -123,7 +119,7 @@ impl Resolve<WriteArgs> for UpdateVariableValue {
     let variable = get_variable(&name).await?;
 
     if value == variable.value {
-      return Ok(masked(variable));
+      return Ok(variable);
     }
 
     db_client()
@@ -155,7 +151,7 @@ impl Resolve<WriteArgs> for UpdateVariableValue {
 
     add_update(update).await?;
 
-    Ok(masked(get_variable(&name).await?))
+    Ok(get_variable(&name).await?)
   }
 }
 
@@ -189,7 +185,7 @@ impl Resolve<WriteArgs> for UpdateVariableDescription {
       .await
       .context("Failed to update variable description on db")?;
 
-    Ok(masked(get_variable(&self.name).await?))
+    Ok(get_variable(&self.name).await?)
   }
 }
 
@@ -223,7 +219,7 @@ impl Resolve<WriteArgs> for UpdateVariableIsSecret {
       .await
       .context("Failed to update Variable 'is_secret' on db")?;
 
-    Ok(masked(get_variable(&self.name).await?))
+    Ok(get_variable(&self.name).await?)
   }
 }
 
@@ -261,9 +257,14 @@ impl Resolve<WriteArgs> for DeleteVariable {
       user,
     );
 
-    let variable = masked(variable);
-    update
-      .push_simple_log("Delete Variable", format!("{variable:#?}"));
+    let mut log_variable = variable.clone();
+    if log_variable.is_secret {
+      log_variable.value = "#".repeat(log_variable.value.len());
+    }
+    update.push_simple_log(
+      "Delete Variable",
+      format!("{log_variable:#?}"),
+    );
     update.finalize();
 
     add_update(update).await?;
