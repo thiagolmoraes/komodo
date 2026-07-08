@@ -72,8 +72,14 @@ impl Resolve<WriteArgs> for CreateVariable {
       user,
     );
 
-    update
-      .push_simple_log("Create Variable", format!("{variable:#?}"));
+    let mut log_variable = variable.clone();
+    if log_variable.is_secret {
+      log_variable.value = "#".repeat(log_variable.value.len());
+    }
+    update.push_simple_log(
+      "Create Variable",
+      format!("{log_variable:#?}"),
+    );
 
     update.finalize();
 
@@ -131,17 +137,14 @@ impl Resolve<WriteArgs> for UpdateVariableValue {
       user,
     );
 
-    let log = if variable.is_secret {
-      format!(
-        "<span class=\"text-muted-foreground\">variable</span>: '{name}'\n<span class=\"text-muted-foreground\">from</span>: <span class=\"text-red-500\">{}</span>\n<span class=\"text-muted-foreground\">to</span>:   <span class=\"text-green-500\">{value}</span>",
-        variable.value.replace(|_| true, "#")
-      )
+    let (from, to) = if variable.is_secret {
+      ("#".repeat(variable.value.len()), "#".repeat(value.len()))
     } else {
-      format!(
-        "<span class=\"text-muted-foreground\">variable</span>: '{name}'\n<span class=\"text-muted-foreground\">from</span>: <span class=\"text-red-500\">{}</span>\n<span class=\"text-muted-foreground\">to</span>:   <span class=\"text-green-500\">{value}</span>",
-        variable.value
-      )
+      (variable.value.clone(), value.clone())
     };
+    let log = format!(
+      "<span class=\"text-muted-foreground\">variable</span>: '{name}'\n<span class=\"text-muted-foreground\">from</span>: <span class=\"text-red-500\">{from}</span>\n<span class=\"text-muted-foreground\">to</span>:   <span class=\"text-green-500\">{to}</span>"
+    );
 
     update.push_simple_log("Update Variable Value", log);
     update.finalize();
@@ -254,8 +257,14 @@ impl Resolve<WriteArgs> for DeleteVariable {
       user,
     );
 
-    update
-      .push_simple_log("Delete Variable", format!("{variable:#?}"));
+    let mut log_variable = variable.clone();
+    if log_variable.is_secret {
+      log_variable.value = "#".repeat(log_variable.value.len());
+    }
+    update.push_simple_log(
+      "Delete Variable",
+      format!("{log_variable:#?}"),
+    );
     update.finalize();
 
     add_update(update).await?;
